@@ -1,0 +1,58 @@
+def pm = Jenkins.instance.pluginManager
+def uc = Jenkins.instance.updateCenter
+def pluginList = ["{{ jenkins_plugins | join ('","') }}"]
+def installedList = []
+def dependList = []
+def pmTasks = []
+
+def checkAreDone(tasks) {
+  def retvalue = true
+  tasks.each {
+    if (!it.isDone()) {
+      retvalue = false
+    }
+  }
+  return retvalue
+}
+
+def deployPlugin(plugin, dependList) {
+  Jenkins.instance.updateCenter.getPlugin(plugin).dependencies.keySet().each {
+    if (! (it in dependList)) {
+      dependList << it
+      deployPlugin(it, dependList)
+    }
+  }
+  if (! (plugin in dependList)) {
+      dependList << plugin
+  }
+}
+
+// Create a list of plugins to install and install them
+pluginList.each {
+  deployPlugin(it, dependList)
+  dependList.each {
+    pmTasks += uc.getPlugin(it).deploy(true)
+  }
+  pmTasks += uc.getPlugin(it).deploy(true)
+}
+
+// Wait until the plugins are installed
+while (!checkAreDone(pmTasks)) {
+  sleep(500)
+}
+
+// Get all the plugins installed in Jenkins
+pm.plugins.each {
+  installedList << it.getShortName()
+}
+
+// Detect the unused plugins and disable them
+def disablePlugins = (installedList - dependList)
+disablePlugins.each {pm.getPlugin(it).disable()}
+dependList.each {pm.getPlugin(it).enable()}
+
+// Restart jenkins if needed
+if (Jenkins.instance.updateCenter.isRestartRequiredForCompletion()) {
+  Jenkins.instance.doSafeRestart(null);
+}
+
