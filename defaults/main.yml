@@ -9,10 +9,15 @@ jenkins_handler_idle: 20
 
 jenkins_allow_signups: false
 
+# These two variables contain the credentials of the user that will deploy
+# all the configuration.
+#
+#jenkins_deploy_user:
+#jenkins_deploy_password:
+
 jenkins_admins:
 #  - ['admin', 'secretpassword']
 
-jenkins_admin_credentials: "--username {{ jenkins_admins[0][0] }} --password {{ jenkins_admins[0][1] }}"
 jenkins_aux_dir: /opt/jenkins
 jenkins_cli_jar: /opt/jenkins/jenkins-cli.jar
 jenkins_home: /var/lib/jenkins
@@ -26,7 +31,7 @@ jenkins_args: ''
 jenkins_conn_retries: 60
 jenkins_conn_delay: 10
 
-jenkins_master_nexecutors: 0
+jenkins_master_nexecutors: 3
 jenkins_master_slavetomastersecurity: true
 
 jenkins_plugins:
