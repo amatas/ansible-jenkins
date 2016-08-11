@@ -1,0 +1,38 @@
+import hudson.slaves.*
+
+def method = null
+DumbSlave node = null
+{% for item in jenkins_master_slaves %}
+{% if item.launchmethod == "ssh" %}
+import hudson.plugins.sshslaves.*
+method = new SSHLauncher("{{ item.ssh_host }}",
+             {{ item.ssh_port | default( 22 , true) }},
+             "{{ item.credentials_id }}",
+             "",
+             "",
+             "",
+             "",
+             0,
+             0,
+             0)
+{% elif item.launchmethod == "webstart" %}
+method = new JNLPLauncher()
+{% else %}
+method = new CommandLauncher("{{ item.master_command }}")
+{% endif %}
+node = new DumbSlave("{{ item.id }}",
+  "{{ item.description }}",
+  "{{ item.root_directory }}",
+  "{{ item.n_executors }}",
+  {% if item.usage == "match" -%}
+    Node.Mode.EXCLUSIVE
+  {%- else -%}
+    Node.Mode.NORMAL
+  {%- endif %},
+  "{{ item.labels }}",
+  method,
+  RetentionStrategy.INSTANCE,
+  new ArrayList())
+
+Jenkins.instance.addNode(node)
+{% endfor %}

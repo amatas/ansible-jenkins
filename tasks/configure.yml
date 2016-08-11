@@ -92,6 +92,7 @@
     - security.gv
     - credentials.gv
     - configuration.gv
+    - nodes.gv
 
 - name: Waiting for port listening
   wait_for:
