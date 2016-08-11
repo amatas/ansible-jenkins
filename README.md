@@ -47,12 +47,47 @@ Example Playbook
           - ['user1', 'password1']
           - ['user2', 'password2']
         jenkins_master_credentials:
-          - id: 'new-credentials'
-            description: 'Credentials'
-            username: 'user'
-            password: 'password'
+          - id: 'docker-registry-credentials'
+            description: 'Credentials to connect to Docker Registry'
+            type: UsernamePassword
+            username: 'admin'
+            password: 'root'
+          - id: 'ssh_root_idprivkey'
+            type: BasicSSHUserPrivateKey
+            scope: global
+            username: root
+            description: "root's private key"
+        jenkins_master_slaves:
+          - id: ssh_node
+            description: "Long description"
+            n_executors: 4
+            root_directory: "/home/ssh_node"
+            launchmethod: ssh
+            usage: match
+            labels: "ssh remote"
+            ssh_host: "h-005"
+            ssh_port: "7022"
+            credentials_id: ssh_root_idprivkey
+          - id: webstart_node
+            description: "Long description"
+            n_executors: 5
+            root_directory: "/home/webstart_node"
+            launchmethod: webstart
+            usage: match
+            labels: "webstart remote"
+          - id: master_node
+            description: "Long description"
+            n_executors: 3
+            root_directory: "/home/master_node"
+            launchmethod: master
+            usage: all
+            labels: "master local"
+            master_command: "cosa.sh" 
         jenkins_plugins:
           - github
+          - cobertura
+          - sst-slaves
+          - tap
           - cobertura
 
 ```
