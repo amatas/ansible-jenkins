@@ -16,7 +16,7 @@
     dest: /etc/sysconfig/jenkins
   when: "{{ not is_docker }}"
 
-- name: Set Wizard flag
+- name: Disable first start Wizard
   copy:
     dest: /var/lib/jenkins/jenkins.install.UpgradeWizard.state
     src: jenkins.install.UpgradeWizard.state
