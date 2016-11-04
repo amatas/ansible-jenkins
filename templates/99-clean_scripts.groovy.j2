@@ -1,0 +1,19 @@
+import jenkins.*
+import jenkins.model.*
+import hudson.security.*
+import hudson.model.* 
+
+logsDir = new File(Jenkins.instance.rootDir, "init.groovy.d") 
+
+def ff = new FilenameFilter() { 
+  public boolean accept(File file, String name) { 
+    return name.endsWith(".groovy"); 
+  } 
+}
+
+for (File file: logsDir.listFiles(ff)) {
+  if (!file.isDirectory()){
+    println ("Deleted " + file.getName() + ": " + file.delete().toString())
+  }
+}
+

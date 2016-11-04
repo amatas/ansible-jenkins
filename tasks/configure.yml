@@ -22,108 +22,34 @@
     src: jenkins.install.UpgradeWizard.state
     owner: "{{ jenkins_user  }}"
 
-- name: Enable and start Jenkins
-  service:
-    name: jenkins
-    state: started
-  when: "{{ not is_docker}}"
-
-- name: Start Jenkins (Docker)
-  command: >
-    su - {{ jenkins_user }}
-    -c /bin/java {{ jenkins_java_options }}
-    -DJENKINS_HOME={{ jenkins_home }}
-    -Djenkins.install.runSetupWizard=false
-    -jar /usr/lib/jenkins/jenkins.war
-    --webroot=/var/cache/jenkins/war
-    --httpPort={{ jenkins_port }}
-    --httpListenAddress={{ jenkins_listen_address }}
-    --ajp13Port=-1
-    --daemon
-    --debug={{ jenkins_debug_level }}
-    --handlerCountMax={{ jenkins_handler_max }}
-    --handlerCountMaxIdle={{ jenkins_handler_idle }}
-  when: "{{ is_docker }}"
-
-- name: Waiting for port listening
-  wait_for:
-    host: "{{ jenkins_listen_address }}"
-    port: "{{ jenkins_port }}"
-
-- name: Wait for Jenkins to be ready
-  uri:
-    url: "http://{{ jenkins_listen_address }}:{{ jenkins_port }}/cli/"
-    return_content: yes
-    status_code: "200,403,401,503"
-  register: result
-  until: >
-    (result.status == 200) or
-    ((result.status == 403) and
-    (result.x_required_permission is defined))
-  retries: "{{ jenkins_conn_retries }}"
-  delay: "{{ jenkins_conn_delay }}"
-  changed_when: false
-
-- name: Install and update plugins
-  uri:
-    url: "{{ jenkins_url }}/scriptText"
-    method: POST
-    user: "{{ jenkins_deploy_user }}"
-    password: "{{ jenkins_deploy_password }}"
-    body: "script={{ lookup('template', '{{ item }}.j2') }}"
-    force_basic_auth: yes
-    status_code: 200
-    timeout: 300
-    body_format: raw
-  with_items:
-    - plugin-installer.gv
-    - security.gv
-    - credentials.gv
-    - configuration.gv
-    - nodes.gv
-
-- name: Waiting for port listening
-  wait_for:
-    host: "{{ jenkins_listen_address }}"
-    port: "{{ jenkins_port }}"
- 
-- name: Wait for Jenkins to be ready
-  uri:
-    url: "http://{{ jenkins_listen_address }}:{{ jenkins_port }}/cli/"
-    return_content: yes
-    status_code: "200,403,401,503"
-  register: result
-  until: >
-    (result.status == 200) or
-    ((result.status == 403) and
-    (result.x_required_permission is defined))
-  retries: "{{ jenkins_conn_retries }}"
-  delay: "{{ jenkins_conn_delay }}"
-  changed_when: false
- 
-- name: Get user token
-  uri:
-    url: "{{ jenkins_url }}/scriptText"
-    method: POST
-    user: "{{ jenkins_deploy_user }}"
-    password: "{{ jenkins_deploy_password }}"
-    body: "script={{ lookup('template', 'get_user_token.gv.j2') }}"
-    force_basic_auth: yes
-    status_code: 200
-    timeout: 300
-    body_format: raw
-    return_content: yes
-  register: std_user_token
-
-- name: Set token fact
-  set_fact: jenkins_user_token={{ std_user_token.content | regex_replace('\n', '') }}
-
-- name: Transfer jenkins-jobs configuration
-  template:
-    src: jenkins_jobs.ini.j2
-    dest: "{{ jenkins_home }}/jenkins_jobs.ini"
+- name: Create Jenkins init groovy scripts
+  file:
+    path: "{{ jenkins_home }}/init.groovy.d"
+    state: directory
     owner: "{{ jenkins_user }}"
-    mode: 0640
+    group: "{{ jenkins_user }}"
+
+- name: Update init scripts
+  template:
+    src: '{{ item }}.j2'
+    dest: "{{ jenkins_home }}/init.groovy.d/a{{ item }}"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
+  with_items:
+    - 01_plugins.groovy
+    - 02_users.groovy
+    - 03-credentials.groovy
+    - 04-configuration.groovy
+    - 05-nodes.groovy
+    - 99-clean_scripts.groovy
+
+
+- name: Create Jenkins init groovy scripts
+  file:
+    path: "{{ jenkins_home }}/secrets"
+    state: directory
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
 
 - name: Set slave to master security
   template:
@@ -131,10 +57,4 @@
     dest: "{{ jenkins_home }}/secrets/slave-to-master-security-kill-switch"
     backup: no
     owner: "{{ jenkins_user }}"
-
-- name: Stop Jenkins (end of configure step)
-  service:
-    name: jenkins
-    state: stopped
-  when: "{{ not is_docker }}"
 

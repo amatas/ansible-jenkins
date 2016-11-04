@@ -13,3 +13,46 @@
     dest: /etc/supervisord/jenkins.ini
   when: is_docker
 
+- name: Waiting for port listening
+  wait_for:
+    host: "{{ jenkins_listen_address }}"
+    port: "{{ jenkins_port }}"
+
+- name: Wait for Jenkins to be ready
+  uri:
+    url: "http://{{ jenkins_listen_address }}:{{ jenkins_port }}/cli/"
+    return_content: yes
+    status_code: "200,403,401,503"
+  register: result
+  until: >
+    (result.status == 200) or
+    ((result.status == 403) and
+    (result.x_required_permission is defined))
+  retries: "{{ jenkins_conn_retries }}"
+  delay: "{{ jenkins_conn_delay }}"
+  changed_when: false
+
+- name: Get user token
+  uri:
+    url: "http://{{ jenkins_listen_address }}:{{ jenkins_port }}/scriptText"
+    method: POST
+    user: "{{ jenkins_deploy_user }}"
+    password: "{{ jenkins_deploy_password }}"
+    body: "script={{ lookup('template', 'get_user_token.gv.j2') }}"
+    force_basic_auth: yes
+    status_code: 200
+    timeout: 300
+    body_format: raw
+    return_content: yes
+  register: std_user_token
+
+- name: Set token fact
+  set_fact: jenkins_user_token={{ std_user_token.content | regex_replace('\n', '') }}
+
+- name: Transfer jenkins-jobs configuration
+  template:
+    src: jenkins_jobs.ini.j2
+    dest: "{{ jenkins_home }}/jenkins_jobs.ini"
+    owner: "{{ jenkins_user }}"
+    mode: 0640
+

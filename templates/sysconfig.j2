@@ -43,7 +43,6 @@ JENKINS_JAVA_CMD="/bin/java"
 #
 # Unix user account that runs the Jenkins daemon
 # Be careful when you change this, as you need to update
-# permissions of $JENKINS_HOME and /var/log/jenkins.
 #
 {% if jenkins_user is defined %}
 JENKINS_USER="{{ jenkins_user }}"

@@ -1,0 +1,29 @@
+import jenkins.*
+import jenkins.model.*
+import hudson.security.*
+import hudson.model.*
+import org.acegisecurity.userdetails.UsernameNotFoundException
+import jenkins.util.groovy.GroovyHookScript
+import java.util.logging.LogManager
+import static java.util.logging.Level.WARNING
+import static java.util.logging.Level.INFO
+
+def instance = Jenkins.getInstance()
+def hudsonrealm = new HudsonPrivateSecurityRealm(true)
+def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+def logger = LogManager.getLogManager().getLogger("jenkins.util.groovy.GroovyHookScript")
+
+{% for entry in jenkins_admins %}
+try {
+  hudsonrealm.loadUserByUsername("{{ entry[0] }}")
+  logger.log(INFO, "user already created: {{ entry[0] }}")
+}
+catch (UsernameNotFoundException) {
+  hudsonrealm.createAccount("{{ entry[0] }}","{{ entry[1] }}")
+  logger.log(INFO, "User added: {{ entry[0] }}")
+}
+{% endfor %}
+
+instance.setSecurityRealm(hudsonrealm)
+instance.setAuthorizationStrategy(strategy)
+instance.save()
