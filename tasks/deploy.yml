@@ -56,3 +56,16 @@
     owner: "{{ jenkins_user }}"
     mode: 0640
 
+- name: Execute a safe restart
+  uri:
+    url: "http://{{ jenkins_listen_address }}:{{ jenkins_port }}/scriptText"
+    method: POST
+    user: "{{ jenkins_deploy_user }}"
+    password: "{{ jenkins_deploy_password }}"
+    body: "script={{ lookup('template', 'safe_restart.gv.j2') }}"
+    force_basic_auth: yes
+    status_code: 200
+    timeout: 300
+    body_format: raw
+    return_content: yes
+
