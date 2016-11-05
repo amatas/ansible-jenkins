@@ -6,6 +6,7 @@
     enabled: yes
     state: started
   when: not is_docker
+  register: jenkinsstarted
 
 - name: Enable Jenkins (Supervisord)
   template:
@@ -68,4 +69,5 @@
     timeout: 300
     body_format: raw
     return_content: yes
+  when: not jenkinsstarted.changed
 
